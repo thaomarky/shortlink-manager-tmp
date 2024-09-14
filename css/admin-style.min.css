@@ -1,0 +1,18 @@
+.tablenav-pages {
+    margin: 20px 0;
+}
+.tablenav-pages a {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background-color: #f9f9f9;
+    color: #333;
+    text-decoration: none;
+}
+.tablenav-pages a.current {
+    background-color: #0073aa;
+    color: #fff;
+    border-color: #0073aa;
+}

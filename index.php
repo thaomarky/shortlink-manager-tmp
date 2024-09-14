@@ -203,7 +203,7 @@ function tmp_admin_page_content() {
                     <td><input type="text" name="url" value="<?php echo esc_attr($edit_data ? $edit_data->url : ''); ?>" class="regular-text" /></td>
                 </tr>
                 <tr valign="top">
-                    <th scope="row">Slug</th>
+                    <th scope="row">Slug (8 characters)</th>
                     <td><input type="text" name="slug" value="<?php echo esc_attr($edit_data ? $edit_data->slug : ''); ?>" class="regular-text" /></td>
                 </tr>
             </table>

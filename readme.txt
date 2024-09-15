@@ -1,10 +1,10 @@
 === Shortlink Manager TMP ===
 Contributors: Thao Marky
 Tags: shortlink, link, url, management, shorten url, shorten link
-Requires at least: 5.0
+Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.0
-Stable tag: 1.0
+Stable tag: 1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Main functions:
 
 == Installation ==
 
-1. Go to yourdomain/wp-admin/plugins.php and upload 'shortlink-manager-tmp.zip' (Or Upload the 'shortlink-manager-tmp' folder to the '/wp-content/plugins/' directory by FTP)
+1. Go to yourdomain/wp-admin/plugins.php and upload 'shortlink-manager-tmp.zip' (Or upload the 'shortlink-manager-tmp' folder to the '/wp-content/plugins/' directory by FTP)
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. Go to 'Shortlink Manager' under the admin menu to start using the plugin.
 
@@ -35,6 +35,12 @@ Main functions:
 3. Manage your shortlinks from the list view.
 
 == Changelog ==
+
+= 1.1 =
+* Update
+- Delete ID column, replace with ascending order number column
+- Latest link will be displayed on top
+- If slug entered is more than 8 characters, a warning will be displayed that failed
 
 = 1.0 =
 * Initial release.

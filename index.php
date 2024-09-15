@@ -3,7 +3,7 @@
 Plugin Name: Shortlink Manager TMP
 Plugin URI: https://thaomarky.com/share-plugin-shortlink-manager-tmp-free.html
 Description: Create and manage short links.
-Version: 1.0
+Version: 1.1
 Author: Thao Marky
 Author URI: https://thaomarky.com
 License: GPLv2 or later
@@ -108,7 +108,9 @@ function tmp_admin_page_content() {
         $url = esc_url_raw($_POST['url']);
         $slug = !empty($_POST['slug']) ? sanitize_title($_POST['slug']) : tmp_generate_random_slug();
 
-        if (empty($url)) {
+        if (strlen($slug) > 8) {
+            echo '<div class="notice notice-error is-dismissible"><p>Slug cannot be longer than 8 characters.</p></div>';
+        } elseif (empty($url)) {
             echo '<div class="notice notice-error is-dismissible"><p>Please enter a valid URL.</p></div>';
         } else {
             // Check for existing link
@@ -165,7 +167,7 @@ function tmp_admin_page_content() {
     
     // Handle sorting
     $orderby = isset($_GET['orderby']) ? sanitize_key($_GET['orderby']) : 'id';
-    $order = isset($_GET['order']) ? strtoupper(sanitize_key($_GET['order'])) : 'ASC';
+    $order = isset($_GET['order']) ? strtoupper(sanitize_key($_GET['order'])) : 'DESC'; // Set default order to DESC
     
     // Validate sorting values
     $allowed_orderby = array('id', 'clicks');
@@ -175,7 +177,7 @@ function tmp_admin_page_content() {
         $orderby = 'id';
     }
     if (!in_array($order, $allowed_order)) {
-        $order = 'ASC';
+        $order = 'DESC'; // Default to DESC
     }
     
     // Pagination
@@ -226,13 +228,11 @@ function tmp_admin_page_content() {
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th style="width: 5%;">
-                        <a href="<?php echo esc_url(add_query_arg(array('orderby' => 'id', 'order' => ($orderby == 'id' && $order == 'ASC') ? 'DESC' : 'ASC', 'paged' => $paged, 'search' => $search))); ?>">ID</a>
-                    </th>
+                    <th style="width: 5%;">#</th> <!-- Replace ID with a sequential number -->
                     <th style="width: 10%;">Slug</th>
                     <th>URL</th>
                     <th style="width: 10%;">
-                        <a href="<?php echo esc_url(add_query_arg(array('orderby' => 'clicks', 'order' => ($orderby == 'clicks' && $order == 'ASC') ? 'DESC' : 'ASC', 'paged' => $paged, 'search' => $search))); ?>">Clicks</a>
+                        <a href="<?php echo esc_url(add_query_arg(array('orderby' => 'clicks', 'order' => ($orderby == 'clicks' && $order == 'DESC') ? 'ASC' : 'DESC', 'paged' => $paged, 'search' => $search))); ?>">Clicks</a>
                     </th>
                     <th style="width: 20%;">Actions</th>
                 </tr>
@@ -240,11 +240,12 @@ function tmp_admin_page_content() {
             <tbody>
                 <?php
                 if ($results):
+                    $counter = ($paged - 1) * $limit + 1; // Initialize the counter
                     foreach ($results as $row):
                         $shortlink = home_url('/' . esc_attr($row->slug));
                 ?>
                         <tr>
-                            <td><?php echo intval($row->id); ?></td>
+                            <td><?php echo $counter++; ?></td> <!-- Display the sequential number -->
                             <td><?php echo esc_html($row->slug); ?></td>
                             <td><a href="<?php echo esc_url($row->url); ?>" target="_blank"><?php echo esc_url($row->url); ?></a></td>
                             <td><?php echo intval($row->clicks); ?></td>
@@ -269,7 +270,7 @@ function tmp_admin_page_content() {
                 if ($total_pages > 1) {
                     for ($i = 1; $i <= $total_pages; $i++) {
                         $class = ($i == $paged) ? ' page-number current' : ' page-number';
-                        echo '<a href="' . esc_url(add_query_arg(array('paged' => $i, 'search' => $search, 'orderby' => $orderby, 'order' => $order))) . '" class="' . esc_attr($class) . '">' . $i . '</a> ';
+                        echo '<a href="' . esc_url(add_query_arg(array('paged' => $i, 'search' => $search))) . '" class="' . esc_attr($class) . '">' . $i . '</a> ';
                     }
                 }
                 ?>
@@ -280,19 +281,14 @@ function tmp_admin_page_content() {
     <?php
 }
 
-// Fetch short links from the database
-function tmp_get_shortlinks($search = '', $orderby = 'id', $order = 'ASC', $limit = 10, $offset = 0) {
+function tmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC', $limit = 10, $offset = 0) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'shortlinks';
-
-    // Build query with search, sorting, and pagination
-    $search_query = !empty($search) ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", "%$search%", "%$search%") : '';
-    
-    $query = $wpdb->prepare(
+    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", "%$search%", "%$search%") : '';
+    $sql = $wpdb->prepare(
         "SELECT * FROM $table_name $search_query ORDER BY $orderby $order LIMIT %d OFFSET %d",
         $limit, $offset
     );
-
-    return $wpdb->get_results($query);
+    return $wpdb->get_results($sql);
 }
 ?>

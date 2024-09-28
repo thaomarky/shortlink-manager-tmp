@@ -9,8 +9,10 @@ Author URI: https://thaomarky.com
 License: GPLv2 or later
 */
 
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
 // Hook to activate the plugin and create the database table
-function tmp_create_shortlink_table() {
+function slmngtmp_create_shortlink_table() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'shortlinks';
 
@@ -31,17 +33,17 @@ function tmp_create_shortlink_table() {
         dbDelta($sql);
     }
 }
-register_activation_hook(__FILE__, 'tmp_create_shortlink_table');
+register_activation_hook(__FILE__, 'slmngtmp_create_shortlink_table');
 
 // Generate a random slug
-function tmp_generate_random_slug() {
+function slmngtmp_generate_random_slug() {
     return substr(md5(time() . wp_rand()), 0, 8);
 }
 
 // Handle redirection for short links
-function tmp_redirect_shortlink() {
+function slmngtmp_redirect_shortlink() {
     global $wpdb;
-    $slug = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+    $slug = sanitize_text_field(trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'));
     $table_name = $wpdb->prefix . 'shortlinks';
 
     if (!empty($slug)) {
@@ -65,34 +67,34 @@ function tmp_redirect_shortlink() {
         }
     }
 }
-add_action('init', 'tmp_redirect_shortlink');
+add_action('init', 'slmngtmp_redirect_shortlink');
 
 // Enqueue admin styles and scripts
-function tmp_enqueue_admin_scripts($hook) {
+function slmngtmp_enqueue_admin_scripts($hook) {
     if ($hook !== 'toplevel_page_shortlink-manager') {
         return;
     }
     wp_enqueue_style('tmp-admin-style', plugin_dir_url(__FILE__) . 'css/admin-style.min.css');
     wp_enqueue_script('tmp-admin-script', plugin_dir_url(__FILE__) . 'js/admin-script.min.js', array('jquery'), null, true);
 }
-add_action('admin_enqueue_scripts', 'tmp_enqueue_admin_scripts');
+add_action('admin_enqueue_scripts', 'slmngtmp_enqueue_admin_scripts');
 
 // Add admin menu for the plugin
-function tmp_admin_page() {
+function slmngtmp_admin_page() {
     add_menu_page(
         'Shortlink Manager',    // Page title
         'Shortlink Manager',    // Menu title
         'manage_options',       // Capability
         'shortlink-manager',    // Menu slug
-        'tmp_admin_page_content', // Function to display content
+        'slmngtmp_admin_page_content', // Function to display content
         'dashicons-admin-links', // Icon
         20                      // Position
     );
 }
-add_action('admin_menu', 'tmp_admin_page');
+add_action('admin_menu', 'slmngtmp_admin_page');
 
 // Display the admin page content
-function tmp_admin_page_content() {
+function slmngtmp_admin_page_content() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'shortlinks';
 
@@ -106,7 +108,7 @@ function tmp_admin_page_content() {
     // Handle form submission
     if (isset($_POST['submit']) && check_admin_referer('tmp_save_link', 'tmp_nonce')) {
         $url = esc_url_raw($_POST['url']);
-        $slug = !empty($_POST['slug']) ? sanitize_title($_POST['slug']) : tmp_generate_random_slug();
+        $slug = !empty($_POST['slug']) ? sanitize_title($_POST['slug']) : slmngtmp_generate_random_slug();
 
         if (strlen($slug) > 8) {
             echo '<div class="notice notice-error is-dismissible"><p>Slug cannot be longer than 8 characters.</p></div>';
@@ -163,7 +165,7 @@ function tmp_admin_page_content() {
 
     // Handle search
     $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
-    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", "%$search%", "%$search%") : '';
+    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", "%".$search."%", "%".$search."%") : '';
     
     // Handle sorting
     $orderby = isset($_GET['orderby']) ? sanitize_key($_GET['orderby']) : 'id';
@@ -184,10 +186,10 @@ function tmp_admin_page_content() {
     $paged = isset($_GET['paged']) ? intval($_GET['paged']) : 1;
     $limit = 10;
     $offset = ($paged - 1) * $limit;
-    $results = tmp_get_shortlinks($search, $orderby, $order, $limit, $offset);
+    $results = slmngtmp_get_shortlinks($search, $orderby, $order, $limit, $offset);
 
     // Calculate total pages
-    $total_links = $wpdb->get_var("SELECT COUNT(*) FROM $table_name $search_query");
+    $total_links = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name $search_query"));
     $total_pages = ceil($total_links / $limit);
     ?>
 
@@ -245,7 +247,7 @@ function tmp_admin_page_content() {
                         $shortlink = home_url('/' . esc_attr($row->slug));
                 ?>
                         <tr>
-                            <td><?php echo $counter++; ?></td> <!-- Display the sequential number -->
+                            <td><?php echo esc_html( $counter++ ); ?></td><!-- Display the sequential number -->
                             <td><?php echo esc_html($row->slug); ?></td>
                             <td><a href="<?php echo esc_url($row->url); ?>" target="_blank"><?php echo esc_url($row->url); ?></a></td>
                             <td><?php echo intval($row->clicks); ?></td>
@@ -281,14 +283,22 @@ function tmp_admin_page_content() {
     <?php
 }
 
-function tmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC', $limit = 10, $offset = 0) {
+
+function slmngtmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC', $limit = 10, $offset = 0) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'shortlinks';
-    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", "%$search%", "%$search%") : '';
-    $sql = $wpdb->prepare(
-        "SELECT * FROM $table_name $search_query ORDER BY $orderby $order LIMIT %d OFFSET %d",
-        $limit, $offset
-    );
+
+    // Sanitizing the search parameter
+    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%') : '';
+
+    // Make sure to sanitize the ordering parameters
+    $orderby = sanitize_text_field($orderby); 
+    $order = sanitize_text_field($order);
+    
+    // Prepare SQL query with safe placeholders
+    $sql = $wpdb->prepare("SELECT * FROM $table_name $search_query ORDER BY $orderby $order LIMIT %d OFFSET %d", intval($limit), intval($offset));
+
     return $wpdb->get_results($sql);
 }
+
 ?>

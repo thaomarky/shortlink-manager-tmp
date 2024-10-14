@@ -2,11 +2,12 @@
 /*
 Plugin Name: Shortlink Manager TMP
 Plugin URI: https://thaomarky.com/share-plugin-shortlink-manager-tmp-free.html
-Description: Create and manage short links.
+Description: Shortlink Manager TMP helps you create and manage short links easily. You can create, edit and delete short links and track clicks.
 Version: 1.1
 Author: Thao Marky
 Author URI: https://thaomarky.com
 License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly

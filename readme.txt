@@ -1,12 +1,14 @@
 === Shortlink Manager TMP ===
-Contributors: Thao Marky
-Tags: shortlink, link, url, management, shorten url, shorten link
+Contributors: thaomarky
+Tags: shortlink, link management, shorten url, shorten link, link manager
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.0
 Stable tag: 1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Short Description: Converts website links into short URLs. Easy to configure, with tracking features.
 
 == Description ==
 
@@ -38,9 +40,9 @@ Main functions:
 
 = 1.1 =
 * Update
-- Delete ID column, replace with ascending order number column
-- Latest link will be displayed on top
-- If slug entered is more than 8 characters, a warning will be displayed that failed
++ Delete ID column, replace with ascending order number column
++ Latest link will be displayed on top
++ If slug entered is more than 8 characters, a warning will be displayed that failed
 
 = 1.0 =
 * Initial release.

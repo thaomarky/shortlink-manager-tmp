@@ -3,7 +3,7 @@
 Plugin Name: Shortlink Manager TMP
 Plugin URI: https://thaomarky.com/share-plugin-shortlink-manager-tmp-free.html
 Description: Shortlink Manager TMP helps you create and manage short links easily. You can create, edit and delete short links and track clicks.
-Version: 1.1
+Version: 1.2
 Author: Thao Marky
 Author URI: https://thaomarky.com
 License: GPLv2 or later
@@ -190,7 +190,13 @@ function slmngtmp_admin_page_content() {
     $results = slmngtmp_get_shortlinks($search, $orderby, $order, $limit, $offset);
 
     // Calculate total pages
-    $total_links = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name $search_query"));
+    //$total_links = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name $search_query"));
+    if ($search) {
+        $total_links = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE slug LIKE %s OR url LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%'));
+    } else {
+        $total_links = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+    }
+
     $total_pages = ceil($total_links / $limit);
     ?>
 
@@ -285,14 +291,35 @@ function slmngtmp_admin_page_content() {
 }
 
 
+//function slmngtmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC', $limit = 10, $offset = 0) {
+    //global $wpdb;
+    //$table_name = $wpdb->prefix . 'shortlinks';
+
+    // Sanitizing the search parameter
+    //$search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%') : '';
+
+    // Make sure to sanitize the ordering parameters
+    //$orderby = sanitize_text_field($orderby); 
+    //$order = sanitize_text_field($order);
+    
+    // Prepare SQL query with safe placeholders
+    //$sql = $wpdb->prepare("SELECT * FROM $table_name $search_query ORDER BY $orderby $order LIMIT %d OFFSET %d", intval($limit), intval($offset));
+
+    //return $wpdb->get_results($sql);
+//}
+
 function slmngtmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC', $limit = 10, $offset = 0) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'shortlinks';
 
-    // Sanitizing the search parameter
-    $search_query = $search ? $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%') : '';
+    // Sanitize search parameter and prepare query
+    if ($search) {
+        $search_query = $wpdb->prepare("WHERE slug LIKE %s OR url LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%');
+    } else {
+        $search_query = '';
+    }
 
-    // Make sure to sanitize the ordering parameters
+    // Ensure ordering parameters are sanitized
     $orderby = sanitize_text_field($orderby); 
     $order = sanitize_text_field($order);
     
@@ -301,5 +328,6 @@ function slmngtmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC',
 
     return $wpdb->get_results($sql);
 }
+
 
 ?>

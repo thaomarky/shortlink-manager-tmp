@@ -4,7 +4,7 @@ Tags: shortlink, link management, shorten url, shorten link, link manager
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.0
-Stable tag: 1.1
+Stable tag: 1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,6 +37,9 @@ Main functions:
 3. Manage your shortlinks from the list view.
 
 == Changelog ==
+
+= 1.2 =
+* Fix: wpdb::prepare() must have a placeholder
 
 = 1.1 =
 * Update

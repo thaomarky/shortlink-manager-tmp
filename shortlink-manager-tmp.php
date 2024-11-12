@@ -3,7 +3,7 @@
 Plugin Name: Shortlink Manager TMP
 Plugin URI: https://thaomarky.com/share-plugin-shortlink-manager-tmp-free.html
 Description: Shortlink Manager TMP helps you create and manage short links easily. You can create, edit and delete short links and track clicks.
-Version: 1.2
+Version: 1.3
 Author: Thao Marky
 Author URI: https://thaomarky.com
 License: GPLv2 or later
@@ -77,8 +77,14 @@ function slmngtmp_enqueue_admin_scripts($hook) {
     }
     wp_enqueue_style('tmp-admin-style', plugin_dir_url(__FILE__) . 'css/admin-style.min.css');
     wp_enqueue_script('tmp-admin-script', plugin_dir_url(__FILE__) . 'js/admin-script.min.js', array('jquery'), null, true);
+
+    wp_localize_script('tmp-admin-script', 'qr_data', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('generate_qr_nonce')
+    ));
 }
 add_action('admin_enqueue_scripts', 'slmngtmp_enqueue_admin_scripts');
+
 
 // Add admin menu for the plugin
 function slmngtmp_admin_page() {
@@ -93,6 +99,7 @@ function slmngtmp_admin_page() {
     );
 }
 add_action('admin_menu', 'slmngtmp_admin_page');
+
 
 // Display the admin page content
 function slmngtmp_admin_page_content() {
@@ -211,11 +218,17 @@ function slmngtmp_admin_page_content() {
             <table class="form-table">
                 <tr valign="top">
                     <th scope="row">Original URL</th>
-                    <td><input type="text" name="url" value="<?php echo esc_attr($edit_data ? $edit_data->url : ''); ?>" class="regular-text" /></td>
+                    <td>
+                        <input type="text" name="url" value="<?php echo esc_attr($edit_data ? $edit_data->url : ''); ?>" class="regular-text" />
+                        <p class="description">Paste your Original link here.</p>
+                    </td>
                 </tr>
                 <tr valign="top">
-                    <th scope="row">Slug (8 characters)</th>
-                    <td><input type="text" name="slug" value="<?php echo esc_attr($edit_data ? $edit_data->slug : ''); ?>" class="regular-text" /></td>
+                    <th scope="row">Slug</th>
+                    <td>
+                        <input type="text" name="slug" value="<?php echo esc_attr($edit_data ? $edit_data->slug : ''); ?>" class="regular-text" />
+                        <p class="description">Leave blank for default. Maximum 8 characters.</p>
+                    </td>
                 </tr>
             </table>
             <p class="submit">
@@ -261,7 +274,9 @@ function slmngtmp_admin_page_content() {
                             <td>
                                 <a href="<?php echo esc_url(admin_url('admin.php?page=shortlink-manager&edit=' . intval($row->id))); ?>" class="button">Edit</a>
                                 <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=shortlink-manager&delete=' . intval($row->id)), 'tmp_delete_link_' . intval($row->id))); ?>" class="button button-danger" onclick="return confirm('Are you sure you want to delete this link?');">Delete</a>
-                                <button onclick="copyLink('<?php echo esc_url(home_url('/' . esc_attr($row->slug))); ?>')" class="button">Copy</button>
+                                <button onclick="copyLink('<?php echo esc_url(home_url('/' . esc_attr($row->slug))); ?>')" class="button">
+                                Copy</button>
+                                <button onclick="generateQR('<?php echo esc_url(home_url('/' . esc_attr($row->slug))); ?>')" class="button">QR Link</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -284,6 +299,15 @@ function slmngtmp_admin_page_content() {
                 }
                 ?>
             </div>
+        </div>
+    </div>
+    <div id="qr-modal" class="qr-modal" style="display:none;">
+        <div class="qr-modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>QR Code for Link</h3>
+            <p id="qr-shortlink"></p>
+            <img id="qr-image" src="" alt="QR Code" />
+            <a id="qr-download" href="#" download>Download QR Code</a>
         </div>
     </div>
 
@@ -329,5 +353,77 @@ function slmngtmp_get_shortlinks($search = '', $orderby = 'id', $order = 'DESC',
     return $wpdb->get_results($sql);
 }
 
+
+// Add the AJAX handler to generate and save the QR code image
+add_action('wp_ajax_generate_qr_code', 'slmngtmp_generate_qr_code');
+function slmngtmp_generate_qr_code() {
+    // Verify user capability and nonce for security
+    if (!current_user_can('manage_options') || !isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'generate_qr_nonce')) {
+        wp_send_json_error(['message' => 'Permission denied or invalid nonce.']);
+    }
+
+    // Sanitize and process shortlink
+    $shortlink = esc_url_raw($_POST['shortlink']);
+    if (empty($shortlink)) {
+        wp_send_json_error(['message' => 'Shortlink cannot be empty.']);
+    }
+
+    $slug = basename($shortlink);
+    $upload_dir = wp_upload_dir();
+    $qr_image_path = $upload_dir['basedir'] . '/shortlink_manager_qr/' . $slug . '.png';
+    $qr_image_url = $upload_dir['baseurl'] . '/shortlink_manager_qr/' . $slug . '.png';
+
+    // Check if QR image exists, generate if not
+    if (!file_exists($qr_image_path)) {
+        $qr_api_url = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($shortlink);
+        $response = wp_remote_get($qr_api_url);
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) != 200) {
+            wp_send_json_error(['message' => 'Failed to generate QR code from API.']);
+        }
+
+        $qr_image_data = wp_remote_retrieve_body($response);
+
+        // Ensure directory exists
+        if (!file_exists($upload_dir['basedir'] . '/shortlink_manager_qr')) {
+            mkdir($upload_dir['basedir'] . '/shortlink_manager_qr', 0755, true);
+        }
+        file_put_contents($qr_image_path, $qr_image_data);
+    }
+
+    wp_send_json_success(['qr_url' => $qr_image_url]);
+}
+
+// Schedule and clean up old QR images
+register_activation_hook(__FILE__, 'slmngtmp_schedule_qr_cleanup');
+register_deactivation_hook(__FILE__, 'slmngtmp_unschedule_qr_cleanup');
+
+function slmngtmp_schedule_qr_cleanup() {
+    if (!wp_next_scheduled('slmngtmp_qr_cleanup_cron')) {
+        wp_schedule_event(time(), 'daily', 'slmngtmp_qr_cleanup_cron');
+    }
+}
+
+function slmngtmp_unschedule_qr_cleanup() {
+    $timestamp = wp_next_scheduled('slmngtmp_qr_cleanup_cron');
+    wp_unschedule_event($timestamp, 'slmngtmp_qr_cleanup_cron');
+}
+
+add_action('slmngtmp_qr_cleanup_cron', 'slmngtmp_cleanup_old_qr_images');
+
+function slmngtmp_cleanup_old_qr_images() {
+    $upload_dir = wp_upload_dir();
+    $qr_dir = $upload_dir['basedir'] . '/shortlink_manager_qr';
+    if (file_exists($qr_dir)) {
+        $files = glob($qr_dir . '/*.png');
+        $seven_days_ago = time() - 7 * DAY_IN_SECONDS;
+
+        foreach ($files as $file) {
+            if (filemtime($file) < $seven_days_ago) {
+                unlink($file);
+            }
+        }
+    }
+}
 
 ?>

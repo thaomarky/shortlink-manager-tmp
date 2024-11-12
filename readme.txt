@@ -4,7 +4,7 @@ Tags: shortlink, link management, shorten url, shorten link, link manager
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.0
-Stable tag: 1.2
+Stable tag: 1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,7 @@ Main functions:
 - Warning when deleting links
 - Sort by ID or click order
 - Paginate 10 links in page
+- QR code generation for shortlink
 
 == Installation ==
 
@@ -38,11 +39,20 @@ Main functions:
 
 == Changelog ==
 
+= 1.3 =
+
+* Update QR code generation for shortlink:
++ QR code is only generated when clicking on the QR Link button
++ The image will be saved in the uploads/shortlink_manager_qr folder and will be automatically deleted after 7 days
++ There is a download button to save or share the image
++ The QR code can be used indefinitely, even if the image is deleted, as long as the shortlink still exists
+
+
 = 1.2 =
 * Fix: wpdb::prepare() must have a placeholder
 
 = 1.1 =
-* Update
+* Update:
 + Delete ID column, replace with ascending order number column
 + Latest link will be displayed on top
 + If slug entered is more than 8 characters, a warning will be displayed that failed
